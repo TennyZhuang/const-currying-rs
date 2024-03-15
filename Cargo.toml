@@ -1,0 +1,16 @@
+[package]
+name = "maybe-const"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+darling = "0.20.8"
+itertools = "0.12.1"
+proc-macro2 = "1.0.79"
+quote = "1.0.35"
+syn = { version = "2.0.52", features = ["full", "extra-traits"] }
+
+[dev-dependencies]
