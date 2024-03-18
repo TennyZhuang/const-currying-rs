@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use darling::{FromAttributes, FromMeta};
-use itertools::Itertools;
+use itertools::{Itertools, MultiProduct};
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{
-    parse_macro_input, parse_quote, punctuated::Punctuated, Attribute, ConstParam, Expr, FnArg,
-    GenericParam, Generics, Ident, ItemFn, Lit, LitInt, Pat, PatIdent, PatType, Result, Signature,
-    Token, Type,
+    parse_macro_input, parse_quote, punctuated::Punctuated, Attribute, Block, ConstParam, Expr,
+    FnArg, GenericParam, Generics, Ident, ItemFn, Lit, LitInt, Pat, PatIdent, PatType, Result,
+    Signature, Token, Type,
 };
 
 #[proc_macro_attribute]
@@ -57,16 +57,21 @@ struct GenTarget {
     ty: Type,
 }
 
+fn remove_attr(arg: FnArg) -> FnArg {
+    match arg {
+        FnArg::Typed(mut typed) => {
+            typed.attrs.clear();
+            FnArg::Typed(typed)
+        }
+        FnArg::Receiver(receiver) => FnArg::Receiver(receiver),
+    }
+}
+
 fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
     let item2 = item.clone();
     let ItemFn { sig, .. } = item;
 
-    let Signature {
-        ident,
-        inputs,
-        generics,
-        ..
-    } = &sig;
+    let Signature { ident, inputs, .. } = &sig;
 
     let targets = inputs
         .iter()
@@ -93,8 +98,11 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
         })
         .collect::<Vec<_>>();
 
+    let old_fn_name = format_ident!("{ident}_orig");
+
     let fns = targets
-        .into_iter()
+        .iter()
+        .cloned()
         .powerset()
         .zip(std::iter::from_fn(|| {
             let item = item2.clone();
@@ -118,7 +126,11 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                         .unwrap_or(t.arg_name.to_string())
                 }))
                 .join("_");
-            let new_fn_ident = Ident::new(&new_fn_name, ident.span());
+            let new_fn_ident = if set.is_empty() {
+                old_fn_name.clone()
+            } else {
+                Ident::new(&new_fn_name, ident.span())
+            };
 
             let added_generic_params = set
                 .iter()
@@ -157,15 +169,8 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                     .cloned()
                     .enumerate()
                     .filter(|(idx, _)| !args_to_remove.contains(idx))
-                    .map(|(_idx, input)| {
-                        let FnArg::Typed(mut typed) = input else {
-                            return input;
-                        };
-                        typed
-                            .attrs
-                            .retain(|attr| !attr.path().is_ident("maybe_const"));
-                        FnArg::Typed(typed)
-                    })
+                    .map(|(_idx, input)| input)
+                    .map(remove_attr)
                     .collect::<Punctuated<_, Token![,]>>()
             };
             let sig = sig.clone();
@@ -188,8 +193,125 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
         })
         .collect::<Vec<_>>();
 
+    // Generate the dispatch function
+    let target_size = targets.len();
+    let all_target_names = targets
+        .iter()
+        .map(|(target)| target.arg_name.clone())
+        .collect::<Vec<_>>();
+
+    let mut branches = targets
+        .iter()
+        .cloned()
+        .enumerate()
+        .powerset()
+        .flat_map(|set| {
+            let new_fn_name = [ident.to_string()]
+                .into_iter()
+                .chain(set.iter().map(|(_, t)| {
+                    t.attr
+                        .dispatch
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .unwrap_or(t.arg_name.to_string())
+                }))
+                .join("_");
+            let new_fn_ident = Ident::new(&new_fn_name, ident.span());
+
+            let remain_args = {
+                let args_to_remove: HashSet<_> = set.iter().map(|(_, t)| t.idx).collect();
+                inputs
+                    .iter()
+                    .cloned()
+                    .enumerate()
+                    .filter(|(idx, _)| !args_to_remove.contains(idx))
+                    .map(|(_idx, input)| input)
+                    .map(|input| match input {
+                        FnArg::Receiver(reciver) => quote! { self },
+                        FnArg::Typed(typed) => match *typed.pat {
+                            Pat::Ident(pat_ident) => {
+                                let name = pat_ident.ident;
+                                quote! { #name }
+                            }
+                            _ => panic!("Only support simple pattern"),
+                        },
+                    })
+                    .collect::<Vec<_>>()
+            };
+
+            Itertools::multi_cartesian_product(set.iter().map(|(idx, target)| {
+                itertools::izip!(
+                    std::iter::repeat(idx),
+                    std::iter::repeat(target.arg_name.clone()),
+                    target.attr.consts.inner.iter(),
+                )
+            }))
+            .map(|const_set| {
+                let mut match_args = all_target_names
+                    .iter()
+                    .map(|target_name| quote! { #target_name })
+                    .collect::<Vec<_>>();
+                let mut const_args = Vec::with_capacity(const_set.len());
+                for (idx_in_target, arg_name, r#const) in const_set {
+                    match_args[*idx_in_target] = quote! { #r#const };
+                    const_args.push(quote! { #r#const });
+                }
+                if remain_args.is_empty() {
+                    quote! {
+                        (#(#match_args),*) => {
+                            #new_fn_ident::<#(#const_args),*>()
+                        }
+                    }
+                } else {
+                    quote! {
+                        (#(#match_args),*) => {
+                            #new_fn_ident::<#(#const_args),*>(#(#remain_args),*,)
+                        }
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    branches.reverse();
+
+    branches.push(quote! {
+        (#(#all_target_names),*) => {
+            #old_fn_name(#(#all_target_names),*,)
+        }
+    });
+
+    let dispatch_fn = {
+        let body: Block = parse_quote! {
+            {
+                match (#(#all_target_names),*) {
+                    #(#branches),*
+                    _ => panic!("No matching branch"),
+                }
+            }
+        };
+        let new_inputs = sig
+            .inputs
+            .iter()
+            .cloned()
+            .map(remove_attr)
+            .collect::<Punctuated<_, Token![,]>>();
+        let new_sig = Signature {
+            inputs: new_inputs,
+            ..sig
+        };
+        let mut new_attrs = item2.attrs.clone();
+        new_attrs.push(parse_quote! { #[inline(always)] });
+        ItemFn {
+            sig: new_sig,
+            block: Box::new(body),
+            attrs: new_attrs,
+            ..item2
+        }
+    };
+
     Ok(quote! {
-        // #item2
+        #dispatch_fn
         #(#fns)*
     })
 }

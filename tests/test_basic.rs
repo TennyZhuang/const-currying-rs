@@ -13,6 +13,7 @@ fn f1(
 }
 
 fn main() {
+    f1_orig(3, true);
     f1(3, true);
     f1_x::<3>(false);
     f1_y::<true>(3);
