@@ -1,6 +1,6 @@
-use maybe_const::maybe_const;
+use const_currying::const_currying;
 
-#[maybe_const]
+#[const_currying]
 fn f1(
     #[maybe_const(dispatch = x, consts = [0, 1])] x: i32,
     #[maybe_const(dispatch = y, consts = [true, false])] y: bool,

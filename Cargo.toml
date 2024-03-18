@@ -1,5 +1,5 @@
 [package]
-name = "maybe-const"
+name = "const-currying"
 version = "0.1.0"
 edition = "2021"
 
