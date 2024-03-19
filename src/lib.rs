@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use darling::{FromAttributes, FromMeta};
-use itertools::{Itertools, MultiProduct};
+use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     parse_macro_input, parse_quote, punctuated::Punctuated, Attribute, Block, ConstParam, Expr,
-    FnArg, GenericParam, Generics, Ident, ItemFn, Lit, LitInt, Pat, PatIdent, PatType, Result,
-    Signature, Token, Type,
+    FnArg, GenericParam, Generics, Ident, ItemFn, Pat, PatIdent, PatType, Result, Signature, Token,
+    Type,
 };
 
 #[proc_macro_attribute]
@@ -67,7 +67,7 @@ fn remove_attr(arg: FnArg) -> FnArg {
     }
 }
 
-fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
+fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
     let item2 = item.clone();
     let ItemFn { sig, .. } = item;
 
@@ -184,20 +184,18 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
             let mut new_attrs = item.attrs.clone();
             let new_attr: Attribute = parse_quote!(#[allow(warnings)]);
             new_attrs.push(new_attr);
-            let new_fn = ItemFn {
+            ItemFn {
                 sig: new_sig,
                 attrs: new_attrs,
                 ..item
-            };
-            new_fn
+            }
         })
         .collect::<Vec<_>>();
 
     // Generate the dispatch function
-    let target_size = targets.len();
     let all_target_names = targets
         .iter()
-        .map(|(target)| target.arg_name.clone())
+        .map(|target| target.arg_name.clone())
         .collect::<Vec<_>>();
 
     let mut branches = targets
@@ -227,7 +225,7 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                     .filter(|(idx, _)| !args_to_remove.contains(idx))
                     .map(|(_idx, input)| input)
                     .map(|input| match input {
-                        FnArg::Receiver(reciver) => quote! { self },
+                        FnArg::Receiver(_reciver) => quote! { self },
                         FnArg::Typed(typed) => match *typed.pat {
                             Pat::Ident(pat_ident) => {
                                 let name = pat_ident.ident;
@@ -240,11 +238,7 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
             };
 
             Itertools::multi_cartesian_product(set.iter().map(|(idx, target)| {
-                itertools::izip!(
-                    std::iter::repeat(idx),
-                    std::iter::repeat(target.arg_name.clone()),
-                    target.attr.consts.inner.iter(),
-                )
+                itertools::izip!(std::iter::repeat(idx), target.attr.consts.inner.iter(),)
             }))
             .map(|const_set| {
                 let mut match_args = all_target_names
@@ -252,7 +246,7 @@ fn inner(attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                     .map(|target_name| quote! { #target_name })
                     .collect::<Vec<_>>();
                 let mut const_args = Vec::with_capacity(const_set.len());
-                for (idx_in_target, arg_name, r#const) in const_set {
+                for (idx_in_target, r#const) in const_set {
                     match_args[*idx_in_target] = quote! { #r#const };
                     const_args.push(quote! { #r#const });
                 }
