@@ -7,6 +7,7 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
+auto_enums = "0.8.5"
 darling = "0.20.8"
 itertools = "0.12.1"
 proc-macro2 = "1.0.79"
@@ -14,3 +15,8 @@ quote = "1.0.35"
 syn = { version = "2.0.52", features = ["full", "extra-traits"] }
 
 [dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "like_bench"
+harness = false
