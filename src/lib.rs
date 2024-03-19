@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use auto_enums::auto_enum;
 use darling::{FromAttributes, FromMeta};
 use itertools::Itertools;
 use proc_macro2::TokenStream;
@@ -67,6 +68,11 @@ fn remove_attr(arg: FnArg) -> FnArg {
     }
 }
 
+fn contains_attr(attrs: &[Attribute]) -> bool {
+    attrs.iter().any(|attr| attr.path().is_ident("maybe_const"))
+}
+
+#[auto_enum]
 fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
     let item2 = item.clone();
     let ItemFn { sig, .. } = item;
@@ -86,6 +92,9 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                 else {
                     return None;
                 };
+                if !contains_attr(attrs) {
+                    return None;
+                }
                 let attr = FieldAttr::from_attributes(attrs).ok()?;
                 Some(GenTarget {
                     attr,
@@ -214,7 +223,11 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                         .unwrap_or(t.arg_name.to_string())
                 }))
                 .join("_");
-            let new_fn_ident = Ident::new(&new_fn_name, ident.span());
+            let new_fn_ident = if set.is_empty() {
+                old_fn_name.clone()
+            } else {
+                Ident::new(&new_fn_name, ident.span())
+            };
 
             let remain_args = {
                 let args_to_remove: HashSet<_> = set.iter().map(|(_, t)| t.idx).collect();
@@ -237,43 +250,44 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                     .collect::<Vec<_>>()
             };
 
-            Itertools::multi_cartesian_product(set.iter().map(|(idx, target)| {
-                itertools::izip!(std::iter::repeat(idx), target.attr.consts.inner.iter(),)
-            }))
-            .map(|const_set| {
-                let mut match_args = all_target_names
-                    .iter()
-                    .map(|target_name| quote! { #target_name })
-                    .collect::<Vec<_>>();
-                let mut const_args = Vec::with_capacity(const_set.len());
-                for (idx_in_target, r#const) in const_set {
-                    match_args[*idx_in_target] = quote! { #r#const };
-                    const_args.push(quote! { #r#const });
-                }
-                if remain_args.is_empty() {
-                    quote! {
-                        (#(#match_args),*) => {
-                            #new_fn_ident::<#(#const_args),*>()
+            #[auto_enum(Iterator)]
+            let const_sets = if set.is_empty() {
+                std::iter::once(vec![])
+            } else {
+                Itertools::multi_cartesian_product(set.iter().map(|(idx, target)| {
+                    itertools::izip!(std::iter::repeat(idx), target.attr.consts.inner.iter(),)
+                }))
+            };
+
+            const_sets
+                .map(|const_set| {
+                    let mut match_args = all_target_names
+                        .iter()
+                        .map(|target_name| quote! { #target_name })
+                        .collect::<Vec<_>>();
+                    let mut const_args = Vec::with_capacity(const_set.len());
+                    for (idx_in_target, r#const) in const_set {
+                        match_args[*idx_in_target] = quote! { #r#const };
+                        const_args.push(quote! { #r#const });
+                    }
+                    if remain_args.is_empty() {
+                        quote! {
+                            (#(#match_args),*) => {
+                                #new_fn_ident::<#(#const_args),*>()
+                            }
+                        }
+                    } else {
+                        quote! {
+                            (#(#match_args),*) => {
+                                #new_fn_ident::<#(#const_args),*>(#(#remain_args),*,)
+                            }
                         }
                     }
-                } else {
-                    quote! {
-                        (#(#match_args),*) => {
-                            #new_fn_ident::<#(#const_args),*>(#(#remain_args),*,)
-                        }
-                    }
-                }
-            })
-            .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
     branches.reverse();
-
-    branches.push(quote! {
-        (#(#all_target_names),*) => {
-            #old_fn_name(#(#all_target_names),*,)
-        }
-    });
 
     let dispatch_fn = {
         let body: Block = parse_quote! {
