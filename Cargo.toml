@@ -1,7 +1,7 @@
 [package]
 name = "const-currying"
 description = "A procedural macro for speeding up your function using currying"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 repository = "https://github.com/TennyZhuang/const-currying-rs"
 license = "Apache-2.0 OR MIT"
