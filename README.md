@@ -6,7 +6,7 @@ A rust proc macro that help you improve your function's performance using [curri
 
 Const generics is a feature of rust that allows you to pass const values as generic parameters. This feature is very useful to improve the performance of your code, by generating multiple versions of the same function at compile time. However, sometimes you have to call the function with a runtime-dependent value, even if it's likely a known const value, or a part of the calls are with const values. This macro helps you to generate multiple versions of the same function, with either const or runtime values, at compile time.
 
-There is an excited crate [partial_const], which already provides a similar feature. It's fully based on the wonderful type system of rust, however, it requires caller to specify the const value explicitly. Our crate provides a proc-macro based solution, which introduces no invasive changes to the caller's code.
+There is an excited crate [partial_const](https://crates.io/crates/partial_const), which already provides a similar feature. It's fully based on the wonderful type system of rust, however, it requires caller to specify the const value explicitly. Our crate provides a proc-macro based solution, which introduces no invasive changes to the caller's code.
 
 ## Usage
 
