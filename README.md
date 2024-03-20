@@ -65,7 +65,7 @@ fn f1(x: i32, y: bool, z: &str) -> (i32, String) {
         (0, y) => f1_x::<0>(y, z),
         (x, y) => f1_orig(x, y, z),
         _ => {
-            ::core::panicking::panic_fmt(format_args!("No matching branch"));
+            panic!("No matching branch");
         }
     }
 }
