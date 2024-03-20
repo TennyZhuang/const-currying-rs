@@ -1,4 +1,6 @@
-![docs.rs](https://img.shields.io/docsrs/const-currying)
+<a href="https://docs.rs/const-currying">
+  <img src="https://img.shields.io/docsrs/const-currying" alt="docs.rs">
+</a>
 
 # Const-currying
 
