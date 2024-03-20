@@ -1,6 +1,10 @@
-<a href="https://docs.rs/const-currying">
-  <img src="https://img.shields.io/docsrs/const-currying" alt="docs.rs">
-</a>
+[![Latest Version]][crates.io]
+[![Documentation]][docs.rs]
+
+[Latest Version]: https://img.shields.io/crates/v/const-currying.svg
+[crates.io]: https://crates.io/crates/const-currying
+[Documentation]: https://img.shields.io/docsrs/const-currying
+[docs.rs]: https://docs.rs/const-currying
 
 # Const-currying
 
@@ -83,5 +87,5 @@ The macro generates multiple versions of the function, and matches the consts ar
 
 ## License
 
-Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
-2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+Licensed under either of [Apache License, Version
+2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT) at your option.
