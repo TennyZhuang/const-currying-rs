@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use std::collections::HashSet;
 
 use auto_enums::auto_enum;

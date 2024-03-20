@@ -1,3 +1,5 @@
+![docs.rs](https://img.shields.io/docsrs/const-currying)
+
 # Const-currying
 
 A rust proc macro that help you improve your function's performance using [curring techniques](https://en.wikipedia.org/wiki/Currying).
