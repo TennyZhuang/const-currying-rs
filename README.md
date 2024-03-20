@@ -80,3 +80,8 @@ In most cases, the compiler optimization is trustworth enough to generate best c
 The macro generates multiple versions of the function, and matches the consts argument explicitly in the dispatcher function. This enforces the compiler to generate the best codes for each const value. This is also why const-generics is introduced to rust, and the macro make it easier to use with a runtime-dependent value.
 
 "No silver bullet" is a well-known principle in software engineering. The macro is not a silver bullet, and it's not always the best choice to use it. At least, it may heavily increase you binary size. You should always profile your code before and after using the macro, and make sure the performance is improved.
+
+## License
+
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
