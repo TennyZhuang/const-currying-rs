@@ -5,11 +5,11 @@ fn f1(
     #[maybe_const(dispatch = x, consts = [0, 1])] x: i32,
     #[maybe_const(dispatch = y, consts = [true, false])] y: bool,
     z: &str,
-) -> i32 {
+) -> (i32, String) {
     if y {
-        x
+        (x, z.to_string())
     } else {
-        -x
+        (-x, z.chars().rev().collect())
     }
 }
 
