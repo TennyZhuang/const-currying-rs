@@ -79,7 +79,7 @@ The original function `f1` is renamed to `f1_orig`, and a powerset of two const 
 
 ## Benifits
 
-In most cases, the compiler optimization is trustworth enough to generate best codes for you. However, when your function is complicated enough to inline, the compiler may not be able to get enough information to optimize the function.
+In most cases, the compiler optimization is trustworth enough to generate best codes for you. However, when your function is too complicated to inline, the compiler may not be able to get enough information to optimize the function.
 
 The macro generates multiple versions of the function, and matches the consts argument explicitly in the dispatcher function. This enforces the compiler to generate the best codes for each const value. This is also why const-generics is introduced to rust, and the macro make it easier to use with a runtime-dependent value.
 
