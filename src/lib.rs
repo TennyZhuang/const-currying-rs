@@ -79,7 +79,12 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
     let item2 = item.clone();
     let ItemFn { sig, .. } = item;
 
-    let Signature { ident, inputs, .. } = &sig;
+    let Signature {
+        ident,
+        inputs,
+        generics,
+        ..
+    } = &sig;
 
     let targets = inputs
         .iter()
@@ -110,6 +115,11 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
         .collect::<Vec<_>>();
 
     let old_fn_name = format_ident!("{ident}_orig");
+
+    let orig_const_args: Vec<_> = generics
+        .const_params()
+        .map(|param| param.ident.clone())
+        .collect();
 
     let fns = targets
         .iter()
@@ -267,11 +277,15 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                         .iter()
                         .map(|target_name| quote! { #target_name })
                         .collect::<Vec<_>>();
-                    let mut const_args = Vec::with_capacity(const_set.len());
+                    let mut added_const_args = Vec::with_capacity(const_set.len());
                     for (idx_in_target, r#const) in const_set {
                         match_args[*idx_in_target] = quote! { #r#const };
-                        const_args.push(quote! { #r#const });
+                        added_const_args.push(quote! { #r#const });
                     }
+                    let const_args = orig_const_args
+                        .iter()
+                        .map(|ident| quote! { #ident })
+                        .chain(added_const_args.into_iter());
                     if remain_args.is_empty() {
                         quote! {
                             (#(#match_args),*) => {
