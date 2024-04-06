@@ -310,7 +310,6 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
             {
                 match (#(#all_target_names),*) {
                     #(#branches),*
-                    _ => panic!("No matching branch"),
                 }
             }
         };
