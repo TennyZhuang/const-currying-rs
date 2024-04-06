@@ -68,9 +68,6 @@ fn f1(x: i32, y: bool, z: &str) -> (i32, String) {
         (1, y) => f1_x::<1>(y, z),
         (0, y) => f1_x::<0>(y, z),
         (x, y) => f1_orig(x, y, z),
-        _ => {
-            panic!("No matching branch");
-        }
     }
 }
 ```
