@@ -8,13 +8,13 @@
 
 # Const-currying
 
-A rust proc macro that help you improve your function's performance using [curring techniques](https://en.wikipedia.org/wiki/Currying).
+A rust proc macro that helps you improve your function's performance using [curring techniques](https://en.wikipedia.org/wiki/Currying).
 
 ## Motivation
 
-Const generics is a feature of rust that allows you to pass const values as generic parameters. This feature is very useful to improve the performance of your code, by generating multiple versions of the same function at compile time. However, sometimes you have to call the function with a runtime-dependent value, even if it's likely a known const value, or a part of the calls are with const values. This macro helps you to generate multiple versions of the same function, with either const or runtime values, at compile time.
+Const generics is a feature of rust that allows you to pass const values as generic parameters. This feature is very useful to improve the performance of your code by generating multiple versions of the same function at compile time. However, sometimes you have to call the function with a runtime-dependent value, even if it's likely a known const value, or a part of the calls are with const values. This macro helps you to generate multiple versions of the same function, with either const or runtime values, at compile time.
 
-There is an excited crate [partial_const](https://crates.io/crates/partial_const), which already provides a similar feature. It's fully based on the wonderful type system of rust, however, it requires caller to specify the const value explicitly. Our crate provides a proc-macro based solution, which introduces no invasive changes to the caller's code.
+There is an exciting crate [partial_const](https://crates.io/crates/partial_const), which already provides a similar feature. It's fully based on the wonderful type system of rust; however, it requires caller to specify the const value explicitly. Our crate provides a proc-macro based solution, which introduces no invasive changes to the caller's code.
 
 ## Usage
 
@@ -74,13 +74,13 @@ fn f1(x: i32, y: bool, z: &str) -> (i32, String) {
 
 The original function `f1` is renamed to `f1_orig`, and a powerset of two const arguments `x` and `y` are generated as different functions `f1_x`, `f1_y` and `f1_x_y`. Finally, the original function `f1` is replaced by a dispatcher function, which calls the generated functions according to the runtime values of `x` and `y`.
 
-## Benifits
+## Benefits
 
-In most cases, the compiler optimization is trustworth enough to generate best codes for you. However, when your function is too complicated to inline, the compiler may not be able to get enough information to optimize the function.
+In most cases, compiler optimization is trustworthy enough to generate the best codes for you. However, when your function is too complicated to inline, the compiler may not be able to get enough information to optimize the function.
 
 The macro generates multiple versions of the function, and matches the consts argument explicitly in the dispatcher function. This enforces the compiler to generate the best codes for each const value. This is also why const-generics is introduced to rust, and the macro make it easier to use with a runtime-dependent value.
 
-"No silver bullet" is a well-known principle in software engineering. The macro is not a silver bullet, and it's not always the best choice to use it. At least, it may heavily increase you binary size. You should always profile your code before and after using the macro, and make sure the performance is improved.
+"No silver bullet" is a well-known principle in software engineering. This macro is not a silver bullet, and it's not always the best choice to use it. At least, it may heavily increase you binary size. You should always profile your code before and after using the macro, and make sure the performance is improved.
 
 ## License
 
