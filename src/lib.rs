@@ -117,8 +117,22 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
     let old_fn_name = format_ident!("{ident}_orig");
 
     let orig_const_args: Vec<_> = generics
-        .const_params()
-        .map(|param| param.ident.clone())
+        .params
+        .iter()
+        .filter(|param| !matches!(param, GenericParam::Lifetime(_)))
+        .map(|param| match param {
+            GenericParam::Type(ty) => {
+                let ident = &ty.ident;
+                quote! { #ident }
+            }
+            GenericParam::Const(const_param) => {
+                let ident = &const_param.ident;
+                quote! { #ident }
+            }
+            GenericParam::Lifetime(_) => {
+                unreachable!("already filtered out")
+            }
+        })
         .collect();
 
     let fns = targets
@@ -282,10 +296,7 @@ fn inner(_attr: TokenStream, item: ItemFn) -> Result<TokenStream> {
                         match_args[*idx_in_target] = quote! { #r#const };
                         added_const_args.push(quote! { #r#const });
                     }
-                    let const_args = orig_const_args
-                        .iter()
-                        .map(|ident| quote! { #ident })
-                        .chain(added_const_args.into_iter());
+                    let const_args = orig_const_args.iter().cloned().chain(added_const_args);
                     if remain_args.is_empty() {
                         quote! {
                             (#(#match_args),*) => {
